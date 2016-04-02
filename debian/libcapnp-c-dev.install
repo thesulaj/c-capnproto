@@ -1,0 +1,5 @@
+debian/tmp/usr/bin
+debian/tmp/usr/include
+debian/tmp/usr/lib/*/libcapnp_c.a
+debian/tmp/usr/lib/*/libcapnp_c.so
+debian/tmp/usr/lib/*/pkgconfig
