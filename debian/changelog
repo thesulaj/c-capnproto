@@ -1,3 +1,9 @@
+c-capnproto (0.2-1) unstable; urgency=low
+
+  * Update to upstream 0.2.
+
+ -- David Lamparter <equinox@opensourcerouting.org>  Wed, 20 Jul 2016 15:14:33 +0200
+
 c-capnproto (0.1-1) unstable; urgency=low
 
   * Initial release.
