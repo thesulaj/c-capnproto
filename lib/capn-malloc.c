@@ -9,11 +9,17 @@
  */
 
 #include "capnp_c.h"
+#include "capnp_priv.h"
 #include <stdlib.h>
 #include <string.h>
 #include <limits.h>
 #include <errno.h>
 
+/* Visual Studio notes:
+ * Unless capn_segment is defined with __declspec(align(64)), check_segment_alignment
+ * Fails to compile in x86 mode, as (sizeof(struct capn_segment)&7) -> (44 & 7) evaluates to 4
+ * Compiles in x64 mode, as (sizeof(struct capn_segment)&7) -> (80 & 7) evaluates to 0
+ */
 struct check_segment_alignment {
 	unsigned int foo : (sizeof(struct capn_segment)&7) ? -1 : 1;
 };
@@ -227,7 +233,7 @@ static int capn_write_mem_packed(struct capn *c, uint8_t *p, size_t sz)
 
 	root = capn_root(c);
 	header_calc(c, &headerlen, &headersz);
-	header = (uint32_t*) p + headersz + 2; /* must reserve two bytes for worst case expansion */
+	header = (uint32_t*) (p + headersz + 2); /* must reserve two bytes for worst case expansion */
 
 	if (sz < headersz*2 + 2) /* We must have space for temporary writing of header to deflate */
 		return -1;
