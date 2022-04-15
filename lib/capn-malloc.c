@@ -18,6 +18,11 @@
 #include <string.h>
 #include <limits.h>
 #include <errno.h>
+#include "sdkconfig.h"
+
+#define CREATE_MIN_SZ CONFIG_UCI_CREATE_MIN_SZ
+#define ZBUF_SZ       CONFIG_UCI_ZBUF_SZ
+#define HDR_SZ        CONFIG_UCI_HDR_SZ
 
 /*
  * 8 byte alignment is required for struct capn_segment.
@@ -36,10 +41,10 @@ struct check_segment_alignment {
 static struct capn_segment *create(void *u, uint32_t id, int sz) {
 	struct capn_segment *s;
 	sz += sizeof(*s);
-	if (sz < 4096) {
-		sz = 4096;
+	if (sz < CREATE_MIN_SZ) {
+		sz = CREATE_MIN_SZ;
 	} else {
-		sz = (sz + 4095) & ~4095;
+		sz = (sz + CREATE_MIN_SZ - 1) & ~(CREATE_MIN_SZ - 1);
 	}
 	s = (struct capn_segment*) calloc(1, sz);
 	s->data = (char*) (s+1);
@@ -78,8 +83,6 @@ void capn_reset_copy(struct capn *c) {
 	c->copy = NULL;
 	c->copylist = NULL;
 }
-
-#define ZBUF_SZ 4096
 
 static int read_fp(void *p, size_t sz, FILE *f, struct capn_stream *z, uint8_t* zbuf, int packed) {
 	if (f && packed) {
@@ -128,7 +131,7 @@ static int init_fp(struct capn *c, FILE *f, struct capn_stream *z, int packed) {
 
 	struct capn_segment *s = NULL;
 	uint32_t i, segnum, total = 0;
-	uint32_t hdr[1024];
+	uint32_t hdr[HDR_SZ];
 	uint8_t zbuf[ZBUF_SZ];
 	char *data = NULL;
 
