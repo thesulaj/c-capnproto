@@ -27,7 +27,7 @@
 
 #define CREATE_MIN_SZ CONFIG_UCI_CREATE_MIN_SZ
 #define ZBUF_SZ       CONFIG_UCI_ZBUF_SZ
-#define HDR_SZ        CONFIG_UCI_HDR_SZ
+#define MAX_SEGS      CONFIG_UCI_MAX_SEGS
 
 /*
  * 8 byte alignment is required for struct capn_segment.
@@ -140,37 +140,39 @@ static int init_fp(struct capn *c, FILE *f, struct capn_stream *z, int packed) {
 
     struct capn_segment *s = NULL;
     uint32_t i, segnum, total = 0;
-    uint32_t hdr[HDR_SZ];
+    uint32_t hdr[MAX_SEGS];
     uint8_t zbuf[ZBUF_SZ];
     char *data = NULL;
 
     capn_init_malloc(c);
 
     /* Read the first four bytes to know how many headers we have */
-    if (read_fp(&segnum, 4, f, z, zbuf, packed)) goto err;
+    if (read_fp(&segnum, 4, f, z, zbuf, packed)) { goto err; }
 
     segnum = capn_flip32(segnum);
-    if (segnum > 1023) goto err;
+    if (segnum > MAX_SEGS - 1) { goto err; }
     segnum++; /* The wire encoding was zero-based */
 
     /* Read the header list */
-    if (read_fp(hdr, 8 * (segnum / 2) + 4, f, z, zbuf, packed)) goto err;
+    if (read_fp(hdr, 8 * (segnum / 2) + 4, f, z, zbuf, packed)) { goto err; }
 
     for (i = 0; i < segnum; i++) {
         uint32_t n = capn_flip32(hdr[i]);
-        if (n > INT_MAX / 8 || n > UINT32_MAX / 8 || UINT32_MAX - total < n * 8)
+        if (n > INT_MAX / 8 || n > UINT32_MAX / 8
+            || UINT32_MAX - total < n * 8) {
             goto err;
+        }
         hdr[i] = n * 8;
         total += hdr[i];
     }
 
     /* Allocate space for the data and the capn_segment structs */
     s = (struct capn_segment *) calloc(1, total + (sizeof(*s) * segnum));
-    if (!s) goto err;
+    if (!s) { goto err; }
 
     /* Now read the data and setup the capn_segment structs */
     data = (char *) (s + segnum);
-    if (read_fp(data, total, f, z, zbuf, packed)) goto err;
+    if (read_fp(data, total, f, z, zbuf, packed)) { goto err; }
 
     for (i = 0; i < segnum; i++) {
         s[i].len = s[i].cap = hdr[i];
